@@ -2,7 +2,7 @@ fn main() {
     println!("Olá! 😃");
 
     loop {
-        println!("");
+        println!();
         println!("Você gostaria de adicionar um novo TODO? 🤔 (Digite: 's' para SIM ou qualquer outra tecla para NÃO)");
 
         if input() == "s" {
