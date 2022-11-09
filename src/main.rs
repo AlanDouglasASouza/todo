@@ -30,14 +30,20 @@ impl Terminal {
         }
     }
 
-    fn ask_for_new_todo(&mut self) -> Todo {        
+    fn should_ask_for_todo(&mut self) -> bool {
+        let mut buf = String::new();
+        self.stdin.read_line(&mut buf).unwrap();
+
+        buf.trim() == "s"
+    }
+
+    fn ask_for_new_todo(&mut self) -> Todo {          
 
         println!("\nVocê gostaria de adicionar um novo TODO? 🤔 (Digite: 's' para SIM ou qualquer outra tecla para NÃO)");
-    
-        let mut buf = String::new();
-        self.stdin.read_line(&mut buf).unwrap();               
         
-        if buf.trim() == "s" {
+        let response = self.should_ask_for_todo();
+        
+        if response {
             println!("\nQual TODO deseja criar?");
 
             let mut new_todo = String::new();
