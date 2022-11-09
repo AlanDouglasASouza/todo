@@ -37,7 +37,7 @@ impl Terminal {
         let mut buf = String::new();
         self.stdin.read_line(&mut buf).unwrap();               
         
-        if buf.trim().to_string() == "s" {
+        if buf.trim() == "s" {
             println!("\nQual TODO deseja criar?");
 
             let mut new_todo = String::new();
