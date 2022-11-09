@@ -43,18 +43,18 @@ impl Terminal {
         
         let response = self.should_ask_for_todo();
         
-        if response {
-            println!("\nQual TODO deseja criar?");
-
-            let mut new_todo = String::new();
-            self.stdin.read_line(&mut new_todo).unwrap();
-            let todo_message = new_todo.trim().to_string();
-
-            Todo { message: todo_message }
-        } else {
+        if !response {
             println!("\nTodo list finalizado! 🤠");
-            std::process::exit(0);  
-        }
+            std::process::exit(0);            
+        } 
+
+        println!("\nQual TODO deseja criar?");
+
+        let mut new_todo = String::new();
+        self.stdin.read_line(&mut new_todo).unwrap();
+        let todo_message = new_todo.trim().to_string();
+
+        Todo { message: todo_message }
     }
 
     fn show_todo(&mut self, todo: &Todo) {        
