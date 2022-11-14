@@ -40,10 +40,8 @@ impl Terminal {
     fn ask_for_new_todo(&mut self) -> Todo {          
 
         println!("\nVocê gostaria de adicionar um novo TODO? 🤔 (Digite: 's' para SIM ou qualquer outra tecla para NÃO)");
-        
-        let response = self.should_ask_for_todo();
-        
-        if !response {
+                
+        if !self.should_ask_for_todo() {
             println!("\nTodo list finalizado! 🤠");
             std::process::exit(0);            
         } 
