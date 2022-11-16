@@ -1,4 +1,4 @@
-use std::io::{Stdin, Stdout, Write};
+use std::io::{Stdin, Stdout, Write, Error};
 use std::io;
 
 fn main() {
@@ -6,10 +6,12 @@ fn main() {
 
     loop {
        let mut ask_todo = Terminal::new();
-       let todo = ask_todo.ask_for_new_todo();       
+       let todo = ask_todo.ask_for_new_todo();
        
-       if let Err(_) = ask_todo.show_todo(&todo) {
-        Terminal::show_error(&mut ask_todo, Err(TerminalError::WriteErr));
+       if let Ok(new_todo) = todo {
+        if let Err(msg_err) = ask_todo.show_todo(&new_todo) {
+            Terminal::show_error(&mut ask_todo, TerminalError::WriteErr(msg_err))
+           }
        }
     }
 }
@@ -33,36 +35,38 @@ impl Terminal {
         }
     }
 
-    fn should_ask_for_todo(&mut self) -> bool {
+    fn should_ask_for_todo(&mut self) -> Result<bool, TerminalError> {
         let mut buf = String::new();
 
-        if let Err(_) = self.stdin.read_line(&mut buf) {
-            self.show_error(Err(TerminalError::StdoutErr));
+        if let Err(msg_err) = self.stdin.read_line(&mut buf) {
+            self.show_error(TerminalError::StdoutErr(msg_err));
+            std::process::exit(1);         
         }
 
-        buf.trim() == "s"
+        Ok(buf.trim() == "s")
     }
 
-    fn ask_for_new_todo(&mut self) -> Todo {          
+    fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError> {          
 
         println!("\nVocê gostaria de adicionar um novo TODO? 🤔 (Digite: 's' para SIM ou qualquer outra tecla para NÃO)");
                 
-        if !self.should_ask_for_todo() {
+        if let Ok(false) = self.should_ask_for_todo() {
             println!("\nTodo list finalizado! 🤠");
             std::process::exit(0);            
         } 
 
         println!("\nQual TODO deseja criar?");
 
-        let mut new_todo = String::new();
+        let mut new_todo = String::new();        
 
-        if let Err(_) = self.stdin.read_line(&mut new_todo) {
-            self.show_error(Err(TerminalError::StdoutErr));
+        if let Err(msg_err) = self.stdin.read_line(&mut new_todo) {
+            self.show_error(TerminalError::StdoutErr(msg_err));
+            std::process::exit(1);
         }
 
         let todo_message = new_todo.trim().to_string();
 
-        Todo { message: todo_message }
+       Ok(Todo { message: todo_message })
     }
 
     fn show_todo(&mut self, todo: &Todo) -> Result<(), io::Error> { 
@@ -70,26 +74,25 @@ impl Terminal {
         Ok(())
     }
 
-    fn show_error(&mut self, data: Result<(), TerminalError>) {
-
-        if let Err(error) = data {
-            println!("{}", TerminalError::message_err(error));
-        }
-       
+    fn show_error(&mut self, error: TerminalError) { 
+        
+        eprintln!("{}", error.message_err());
+        
     }
 }
 
+#[derive(Debug)]
 enum TerminalError {    
-    WriteErr,
-    StdoutErr,
+    WriteErr(Error),
+    StdoutErr(Error),
 }
 
 impl TerminalError {
 
-    fn message_err(msg: TerminalError) -> String {
-        match msg {            
-            Self::WriteErr => "Houve um erro ao tentar exibir mensagem".to_string(),
-            Self::StdoutErr => "Houve um erro na entrada de dados".to_string(),      
+    fn message_err(self) -> String {
+        match self {            
+            Self::WriteErr(err) => format!("Houve um erro ao tentar exibir mensagem {}", err),
+            Self::StdoutErr(err) => format!("Houve um erro na entrada de dados {}", err)
         }
     }
 }
