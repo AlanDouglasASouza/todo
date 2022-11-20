@@ -7,12 +7,15 @@ fn main() {
     loop {
        let mut ask_todo = Terminal::new();
        let todo = ask_todo.ask_for_new_todo();
-       
-       if let Ok(new_todo) = todo {
-        if let Err(msg_err) = ask_todo.show_todo(&new_todo) {
-            Terminal::show_error(&mut ask_todo, TerminalError::WriteErr(msg_err))
-           }
-       }
+
+       match todo {
+           Ok(new_todo) => {            
+                if let Err(error) = ask_todo.show_todo(&new_todo) {
+                    ask_todo.show_error(TerminalError::WriteErr(error))
+                }        
+           },
+           Err(error) => ask_todo.show_error(error)
+       }       
     }
 }
 
@@ -38,15 +41,12 @@ impl Terminal {
     fn should_ask_for_todo(&mut self) -> Result<bool, TerminalError> {
         let mut buf = String::new();
 
-        if let Err(msg_err) = self.stdin.read_line(&mut buf) {
-            self.show_error(TerminalError::StdoutErr(msg_err));
-            std::process::exit(1);         
-        }
+        self.stdin.read_line(&mut buf).map_err(TerminalError::StdoutErr)?;
 
         Ok(buf.trim() == "s")
     }
 
-    fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError> {          
+    fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError> {
 
         println!("\nVocê gostaria de adicionar um novo TODO? 🤔 (Digite: 's' para SIM ou qualquer outra tecla para NÃO)");
                 
@@ -57,16 +57,14 @@ impl Terminal {
 
         println!("\nQual TODO deseja criar?");
 
-        let mut new_todo = String::new();        
+        let mut new_todo = String::new();
 
-        if let Err(msg_err) = self.stdin.read_line(&mut new_todo) {
-            self.show_error(TerminalError::StdoutErr(msg_err));
-            std::process::exit(1);
-        }
+        self.stdin.read_line(&mut new_todo).map_err(TerminalError::StdoutErr)?;
 
         let todo_message = new_todo.trim().to_string();
 
-       Ok(Todo { message: todo_message })
+        Ok(Todo { message: todo_message })
+       
     }
 
     fn show_todo(&mut self, todo: &Todo) -> Result<(), io::Error> { 
