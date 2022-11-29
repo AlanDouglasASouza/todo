@@ -25,7 +25,8 @@ impl Terminal {
     }
 
     pub fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError> {
-        let ask_todo = style("\nQual TODO deseja criar?").magenta().bold();
+        self.output.clear_screen().map_err(TerminalError::StdoutErr)?;
+        let ask_todo = style("\nQual TODO deseja criar?").magenta();
 
         self.output
             .write_line(&ask_todo.to_string())
@@ -48,7 +49,7 @@ impl Terminal {
     }
 
     pub fn show_error(&mut self, error: TerminalError) {
-        eprintln!("{}", error.message_err());
+        eprintln!("{}", style(error.message_err()).red().bold());
     }
 }
 
