@@ -1,6 +1,7 @@
 use crate::response::UserResponse;
 use crate::todo::Todo;
-use console::{style, Term};
+use crate::todos::Todos;
+use console::{style, Style, Term};
 use std::io::Error;
 use std::num::ParseIntError;
 
@@ -18,7 +19,7 @@ impl Terminal {
     }
 
     pub fn should_ask_for_todo(&mut self) -> Result<UserResponse, TerminalError> {
-        let response = self.input.read_line().map_err(TerminalError::StdinErr)?;
+        let response = self.input()?;
         match response.trim() {
             "1" => Ok(UserResponse::Insert),
             "2" => Ok(UserResponse::ShowTodos),
@@ -35,7 +36,7 @@ impl Terminal {
         self.output
             .write_line(&ask_todo.to_string())
             .map_err(TerminalError::StdoutErr)?;
-        let new_todo = self.input.read_line().map_err(TerminalError::StdinErr)?;
+        let new_todo = self.input()?;
 
         Ok(Todo { message: new_todo })
     }
@@ -55,10 +56,52 @@ impl Terminal {
         eprintln!("{}", style(error.message_err()).red().bold());
     }
 
-    pub fn ask_which_todo(&mut self) -> Result<u8, TerminalError> {
-        let user_response = self.input.read_line().map_err(TerminalError::StdinErr)?;
-        let response: u8 = user_response.parse().map_err(TerminalError::ParseErr)?;
-        Ok(response)
+    pub fn ask_which_todo(&mut self, list_todos: &mut Todos) -> Result<(), TerminalError> {
+        let blue = Style::new().blue().bold();
+        let red = Style::new().red();
+        let green = Style::new().green();
+        
+        self.clean()?;
+        loop {
+            list_todos.show_all_todos(true)?;
+            println!(
+                "\n{}\n",
+                blue.apply_to("Digite o número do TODO que deseja alterar:")
+            );
+
+            let response = self.input()?.parse().map_err(TerminalError::ParseErr);
+
+            match response {
+                Ok(key) => {
+                    if let Some(result) = list_todos.get_one_todo(key) {
+                        self.show_todo(result, "\n✅: ")?;
+                        let new_todo = self.ask_for_new_todo()?;
+                        list_todos.update(key, new_todo);
+                        self.clean()?;
+                        println!(
+                            "✅ {} ✅",
+                            green.apply_to("TODO atualizado com sucesso!").bold()
+                        );
+                        break;
+                    } else {
+                        self.clean()?;
+                        println!(
+                            "❗ {} ❗\n",
+                            red.apply_to("O TODO que você digitou não existe")
+                        );
+                    }
+                }
+                Err(_) => {
+                    self.clean()?;
+                    println!(
+                        "❗ {} ❗\n",
+                        red.apply_to("O identificador do TODO precisa ser um número!")
+                    )
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn clean(&mut self) -> Result<(), TerminalError> {
@@ -68,6 +111,22 @@ impl Terminal {
 
         Ok(())
     }
+
+    fn input(&mut self) -> Result<String, TerminalError> {
+        let response = self.input.read_line().map_err(TerminalError::StdinErr)?;
+        Ok(response)
+    }
+
+    //Errado
+    pub fn or_not_found<'a>(
+        &mut self,
+        maybe_todo: Option<&'a Todo>,
+    ) -> Result<&'a Todo, TerminalError> {
+        match maybe_todo {
+            Some(todo) => Ok(todo),
+            None => Err(TerminalError::NotFound("Valor não encontrado".to_string())),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -75,6 +134,7 @@ pub enum TerminalError {
     StdoutErr(Error),
     StdinErr(Error),
     ParseErr(ParseIntError),
+    NotFound(String),
 }
 
 impl TerminalError {
@@ -82,7 +142,15 @@ impl TerminalError {
         match self {
             Self::StdoutErr(err) => format!("Houve um erro ao tentar exibir mensagem {}", err),
             Self::StdinErr(err) => format!("Houve um erro na entrada de dados {}", err),
-            Self::ParseErr(err) => format!("Houve um erro na entrada de dados {}", err),
+            Self::ParseErr(err) => format!("Houve um erro ao analisar os seus dados {}", err),
+            Self::NotFound(err) => format!("{err}"),
         }
     }
+
+    /* pub fn or_not_found(maybe_todo: Option<&Todo>) -> Result<&Todo, TerminalError> {
+        match maybe_todo {
+            Some(todo) => Ok(todo),
+            None => Err(Self::NotFound("Valor não encontrado".to_string()))
+        }
+    } */
 }

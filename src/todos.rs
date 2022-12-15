@@ -1,39 +1,54 @@
 use crate::terminal::{Terminal, TerminalError};
 use crate::todo::Todo;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub struct Todos {
-    all_todos: HashMap<u8, Todo>,
-    length: u8,
+    todo_collection: BTreeMap<u32, Todo>,
+    length: u32,
 }
 
 impl Todos {
     pub fn new() -> Self {
         Todos {
-            all_todos: HashMap::<u8, Todo>::new(),
+            todo_collection: BTreeMap::<u32, Todo>::new(),
             length: 0,
         }
     }
 
     pub fn insert_todo(&mut self, todo: Todo) {
         self.length += 1;
-        self.all_todos.entry(self.length).or_insert(todo);
+        self.todo_collection.entry(self.length).or_insert(todo);
     }
 
-    pub fn update(&mut self, id: u8, new_todo: Todo) -> bool {
-        if let Some(_) = self.all_todos.get(&id) {
-            self.all_todos.insert(id, new_todo);
+    //Ver por que do retorno
+    pub fn update(&mut self, id: u32, new_todo: Todo) -> bool {
+        if self.todo_collection.contains_key(&id) {
+            self.todo_collection.insert(id, new_todo);
+            return true;
+        }
+
+        false
+        /* if let Some(_) = self.todo_collection.get(&id) {
+            self.todo_collection.insert(id, new_todo);
             true
         } else {
             false
-        }
+        } */
     }
 
     pub fn show_all_todos(&mut self, show_keys: bool) -> Result<(), TerminalError> {
         let mut terminal = Terminal::new();
-        let todos = &self.all_todos;
-        let mut keys: Vec<&u8> = todos.keys().collect();
+
+        for (key, todo) in &self.todo_collection {
+            if show_keys {
+                terminal.show_todo(todo, format!("{key}: ").as_str())?;
+            } else {
+                terminal.show_todo(todo, "✅: ")?;
+            }
+        }
+        /* let todos = &self.todo_collection;
+        let mut keys: Vec<&u32> = todos.keys().collect();
         keys.sort();
 
         for key in keys {
@@ -44,15 +59,15 @@ impl Todos {
                     terminal.show_todo(message, "✅: ")?;
                 }
             }
-        }
+        } */
         Ok(())
     }
 
-    pub fn get_one_todo(&mut self, key: u8) -> Option<&Todo> {
-        self.all_todos.get(&key)
+    pub fn get_one_todo(&mut self, key: u32) -> Option<&Todo> {
+        self.todo_collection.get(&key)
     }
 
-    pub fn remove(&mut self, key: u8) {
-        self.all_todos.remove(&key);
+    pub fn remove(&mut self, key: u32) {
+        self.todo_collection.remove(&key);
     }
 }
