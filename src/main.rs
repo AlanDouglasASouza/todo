@@ -1,6 +1,6 @@
 mod terminal;
 mod todo;
-use terminal::{Terminal, TerminalError, UserResponse};
+use crate::terminal::{Terminal, TerminalError, UserResponse};
 use console::Style;
 
 fn main() {
