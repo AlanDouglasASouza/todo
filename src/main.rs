@@ -1,6 +1,10 @@
+mod response;
 mod terminal;
 mod todo;
-use crate::terminal::{Terminal, TerminalError, UserResponse};
+mod todos;
+use crate::response::UserResponse;
+use crate::terminal::{Terminal, TerminalError};
+use crate::todos::Todos;
 use console::Style;
 
 fn main() {
@@ -14,28 +18,53 @@ fn main() {
 }
 
 fn run() -> Result<(), TerminalError> {
+    let mut list_todos = Todos::new();
     loop {
-        let mut ask_todo = Terminal::new();
-        let magenta = Style::new().magenta();
+        let mut terminal = Terminal::new();
         let blue = Style::new().blue().bold();
 
-        println!(
-            "\n{} 🤔 (Digite: 's' para SIM ou 'n' para NÃO)",            
-            magenta.apply_to("Você gostaria de adicionar um novo TODO?")
-        );
+        terminal.show_options()?;
 
-        match ask_todo.should_ask_for_todo()? {
-            UserResponse::No => {
-                println!("\n😁 {} 🤠\n", magenta.apply_to("Ok!! Todo list finalizado!").bold());
+        match terminal.should_ask_for_todo()? {
+            UserResponse::Exit => {
+                terminal.finish_todo()?;
                 break;
             }
-            UserResponse::Other => {
-                println!("\n🙁 {}", 
-                blue.apply_to("Desculpe esse comando não é válido para esse processo..."));
+            UserResponse::Other => terminal.show_invalid_option()?,
+            UserResponse::Insert => {
+                terminal.clean()?;
+                let todo = terminal.ask_for_new_todo()?;
+                terminal.show_todo(&todo, "\n✅: ")?;
+                list_todos.insert_todo(todo);
             }
-            UserResponse::Yes => {
-                let todo = ask_todo.ask_for_new_todo()?;
-                ask_todo.show_todo(&todo)?;
+            UserResponse::ShowTodos => {
+                terminal.clean()?;
+                println!("\n{}\n", blue.apply_to("📖 Os seus TODO's são:"));
+                list_todos.show_all_todos(false)?;
+            }
+            UserResponse::Update => {
+                terminal.clean()?;
+                loop {
+                    match terminal.update_todo(&mut list_todos) {
+                        Ok(()) => break,
+                        Err(error) => {
+                            terminal.clean()?;
+                            terminal.show_error(error)
+                        }
+                    }
+                }
+            }
+            UserResponse::Delete => {
+                terminal.clean()?;
+                loop {
+                    match terminal.delete_todo(&mut list_todos) {
+                        Ok(()) => break,
+                        Err(error) => {
+                            terminal.clean()?;
+                            terminal.show_error(error)
+                        }
+                    }
+                }
             }
         }
     }
