@@ -160,12 +160,9 @@ impl Terminal {
         &mut self,
         maybe_todo: Option<&'a Todo>,
     ) -> Result<&'a Todo, TerminalError> {
-        match maybe_todo {
-            Some(todo) => Ok(todo),
-            None => Err(TerminalError::NotFound(
-                "❗ O valor consultado não existe ❗".to_string(),
-            )),
-        }
+        maybe_todo.ok_or(TerminalError::NotFound(
+            "❗ O valor consultado não existe ❗".to_string(),
+        ))        
     }
 }
 
