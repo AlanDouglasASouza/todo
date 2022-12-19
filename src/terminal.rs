@@ -78,10 +78,7 @@ impl Terminal {
         eprintln!("{}\n", style(error.message_err()).red().bold());
     }
 
-    pub fn update_todo(&mut self, list_todos: &mut Todos) -> Result<(), TerminalError> {
-        if !self.check_list_is_empty(list_todos) {
-            return Ok(());
-        }
+    pub fn update_todo(&mut self, list_todos: &mut Todos) -> Result<(u32, Todo), TerminalError> {        
         list_todos.show_all_todos(true)?;
         self.write_styled(
             "\nDigite o número do TODO que deseja ALTERAR:\n",
@@ -89,32 +86,22 @@ impl Terminal {
         )?;
         let key = self.ask_which_todo(list_todos)?;
         let new_todo = self.ask_for_new_todo()?;
-        list_todos.update(key, new_todo);
-        self.clean()?;
-        self.write_styled(
-            "✅ TODO atualizado com sucesso! ✅",
-            Style::new().green().bold(),
-        )?;
-        Ok(())
+        Ok((key, new_todo))        
     }
 
-    pub fn delete_todo(&mut self, list_todos: &mut Todos) -> Result<(), TerminalError> {
-        if !self.check_list_is_empty(list_todos) {
-            return Ok(());
-        }
+    pub fn delete_todo(&mut self, list_todos: &mut Todos) -> Result<u32, TerminalError> {        
         list_todos.show_all_todos(true)?;
         self.write_styled(
             "\nDigite o número do TODO que deseja DELETAR: ❌\n",
             Style::new().blue().bold(),
         )?;
         let key = self.ask_which_todo(list_todos)?;
+        Ok(key)        
+    }
 
-        list_todos.remove(key);
+    pub fn write_feedback(&mut self, feedback: &str) -> Result<(), TerminalError> {
         self.clean()?;
-        self.write_styled(
-            "❌ O TODO foi excluído com sucesso! ❌",
-            Style::new().red().bold(),
-        )?;
+        self.write_styled(feedback, Style::new().green().bold())?;
         Ok(())
     }
 
@@ -133,7 +120,7 @@ impl Terminal {
         Ok(key)
     }
 
-    fn check_list_is_empty(&mut self, list: &mut Todos) -> bool {
+    pub fn check_list_is_empty(&mut self, list: &mut Todos) -> bool {
         if list.len() < 1 {
             self.show_error(TerminalError::NotFound(
                 "A sua coleção de TODOs esta vazia".to_string(),
@@ -162,7 +149,7 @@ impl Terminal {
     ) -> Result<&'a Todo, TerminalError> {
         maybe_todo.ok_or(TerminalError::NotFound(
             "❗ O valor consultado não existe ❗".to_string(),
-        ))        
+        ))
     }
 }
 

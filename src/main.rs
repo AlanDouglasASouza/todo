@@ -44,9 +44,17 @@ fn run() -> Result<(), TerminalError> {
             }
             UserResponse::Update => {
                 terminal.clean()?;
+
                 loop {
+                    if !terminal.check_list_is_empty(&mut list_todos) {
+                        break;
+                    }
                     match terminal.update_todo(&mut list_todos) {
-                        Ok(()) => break,
+                        Ok((key, todo)) => {
+                            list_todos.update(key, todo);
+                            terminal.write_feedback("✅ TODO atualizado com sucesso! ✅")?;
+                            break;
+                        }
                         Err(error) => {
                             terminal.clean()?;
                             terminal.show_error(error)
@@ -57,8 +65,15 @@ fn run() -> Result<(), TerminalError> {
             UserResponse::Delete => {
                 terminal.clean()?;
                 loop {
+                    if !terminal.check_list_is_empty(&mut list_todos) {
+                        break;
+                    }
                     match terminal.delete_todo(&mut list_todos) {
-                        Ok(()) => break,
+                        Ok(key) => {
+                            list_todos.remove(key);
+                            terminal.write_feedback("❌ O TODO foi excluído com sucesso! ❌")?;
+                            break;
+                        }
                         Err(error) => {
                             terminal.clean()?;
                             terminal.show_error(error)
