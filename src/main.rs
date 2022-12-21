@@ -1,10 +1,14 @@
+mod command;
 mod terminal;
 mod todo;
-use terminal::{Terminal, TerminalError, UserResponse};
+mod todos;
+use crate::command::UserCommand;
+use crate::terminal::{Terminal, TerminalError};
+use crate::todos::Todos;
 use console::Style;
 
 fn main() {
-    let mut terminal = Terminal::new();
+    let terminal = Terminal::new();
     let magenta = Style::new().magenta();
     println!("{} 😃", magenta.apply_to("Olá!").bold());
 
@@ -14,28 +18,61 @@ fn main() {
 }
 
 fn run() -> Result<(), TerminalError> {
+    let mut list_todos = Todos::new();
     loop {
-        let mut ask_todo = Terminal::new();
-        let magenta = Style::new().magenta();
+        let terminal = Terminal::new();
         let blue = Style::new().blue().bold();
 
-        println!(
-            "\n{} 🤔 (Digite: 's' para SIM ou 'n' para NÃO)",            
-            magenta.apply_to("Você gostaria de adicionar um novo TODO?")
-        );
+        terminal.show_options()?;
 
-        match ask_todo.should_ask_for_todo()? {
-            UserResponse::No => {
-                println!("\n😁 {} 🤠\n", magenta.apply_to("Ok!! Todo list finalizado!").bold());
+        match terminal.get_user_command()? {
+            UserCommand::Exit => {
+                terminal.finish_todo()?;
                 break;
             }
-            UserResponse::Other => {
-                println!("\n🙁 {}", 
-                blue.apply_to("Desculpe esse comando não é válido para esse processo..."));
+            UserCommand::Other => terminal.show_invalid_option()?,
+            UserCommand::Insert => {
+                terminal.clean()?;
+                let todo = terminal.ask_for_new_todo()?;
+                terminal.show_todo(&todo, "\n✅: ")?;
+                list_todos.insert_todo(todo);
             }
-            UserResponse::Yes => {
-                let todo = ask_todo.ask_for_new_todo()?;
-                ask_todo.show_todo(&todo)?;
+            UserCommand::ShowTodos => {
+                terminal.clean()?;
+                println!("\n{}\n", blue.apply_to("📖 Os seus TODO's são:"));
+                list_todos.show_all_todos(false)?;
+            }
+            UserCommand::Update => {
+                terminal.clean()?;
+                while terminal.check_list_is_empty(&mut list_todos) {
+                    match terminal.get_todo_for_update(&list_todos) {
+                        Ok((key, todo)) => {
+                            list_todos.update(key, todo);
+                            terminal.write_feedback("✅ TODO atualizado com sucesso! ✅")?;
+                            break;
+                        }
+                        Err(error) => {
+                            terminal.clean()?;
+                            terminal.show_error(error)
+                        }
+                    }
+                }
+            }
+            UserCommand::Delete => {
+                terminal.clean()?;
+                while terminal.check_list_is_empty(&mut list_todos) {
+                    match terminal.get_id_todo_for_remove(&list_todos) {
+                        Ok(key) => {
+                            list_todos.remove(key);
+                            terminal.write_feedback("❌ O TODO foi excluído com sucesso! ❌")?;
+                            break;
+                        }
+                        Err(error) => {
+                            terminal.clean()?;
+                            terminal.show_error(error)
+                        }
+                    }
+                }
             }
         }
     }
