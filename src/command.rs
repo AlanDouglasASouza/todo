@@ -1,4 +1,4 @@
-pub enum UserResponse {
+pub enum UserCommand {
     Update,
     Insert,
     Exit,

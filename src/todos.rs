@@ -30,8 +30,8 @@ impl Todos {
         false
     }
 
-    pub fn show_all_todos(&mut self, show_keys: bool) -> Result<(), TerminalError> {
-        let mut terminal = Terminal::new();
+    pub fn show_all_todos(&self, show_keys: bool) -> Result<(), TerminalError> {
+        let terminal = Terminal::new();
 
         for (key, todo) in &self.todo_collection {
             if show_keys {
@@ -44,7 +44,7 @@ impl Todos {
         Ok(())
     }
 
-    pub fn get_one_todo(&mut self, key: u32) -> Option<&Todo> {
+    pub fn get_one_todo(&self, key: u32) -> Option<&Todo> {
         self.todo_collection.get(&key)
     }
 
@@ -52,7 +52,7 @@ impl Todos {
         self.todo_collection.remove(&key);
     }
 
-    pub fn len(&mut self) -> usize {
+    pub fn len(&self) -> usize {
         self.todo_collection.len()
     }
 }
