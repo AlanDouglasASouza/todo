@@ -12,7 +12,7 @@ pub struct Terminal {
 
 impl Terminal {
     pub fn new() -> Self {
-        Terminal {
+        Self {
             input: Term::stdout(),
             output: Term::stdout(),
         }

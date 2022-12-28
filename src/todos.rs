@@ -9,7 +9,7 @@ pub struct Todos {
 
 impl Todos {
     pub fn new() -> Self {
-        Todos {
+        Self {
             todo_collection: BTreeMap::<u32, Todo>::new(),
             length: 0,
         }

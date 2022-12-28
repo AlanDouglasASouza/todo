@@ -10,16 +10,17 @@ pub(crate) struct TodoCli {
 
 impl TodoCli {
     pub fn new() -> Self {
-        TodoCli {
+        Self {
             user_interface: Box::new(Terminal::new()),
             todo_storage: Box::new(Todos::new()),
         }
     }
 
     pub fn run(&mut self) -> Result<(), TerminalError> {
-        loop {
-            let blue = Style::new().blue().bold();
+        self.user_interface
+            .write_styled("Olá! 😃", Style::new().magenta())?;
 
+        loop {
             self.user_interface.show_options()?;
 
             match self.user_interface.get_user_command()? {
@@ -36,7 +37,8 @@ impl TodoCli {
                 }
                 UserCommand::ShowTodos => {
                     self.user_interface.clean()?;
-                    println!("\n{}\n", blue.apply_to("📖 Os seus TODO's são:"));
+                    self.user_interface
+                        .write_styled("\n📖 Os seus TODO's são:\n", Style::new().blue().bold())?;
                     self.todo_storage.show_all_todos(false)?;
                 }
                 UserCommand::Update => {
