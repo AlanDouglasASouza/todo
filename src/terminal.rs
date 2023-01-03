@@ -34,7 +34,7 @@ pub trait UserInterface {
     fn get_id_todo_for_remove(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
     fn write_feedback(&self, feedback: &str) -> Result<(), TerminalError>;
     fn clean(&self) -> Result<(), TerminalError>;
-    fn ask_which_todo(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;   
+    fn ask_which_todo(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
     fn input(&self) -> Result<String, TerminalError>;
     fn write_styled(&self, message: &str, style: Style) -> Result<(), TerminalError>;
     fn or_not_found<'a>(&self, maybe_todo: Option<&'a Todo>) -> Result<&'a Todo, TerminalError>;
@@ -114,7 +114,6 @@ impl UserInterface for Terminal {
         &self,
         list_todos: &dyn TodoStorage,
     ) -> Result<(u32, Todo), TerminalError> {
-        list_todos.show_all_todos(true)?;
         self.write_styled(
             "\nDigite o número do TODO que deseja ALTERAR:\n",
             Style::new().blue().bold(),
@@ -125,7 +124,6 @@ impl UserInterface for Terminal {
     }
 
     fn get_id_todo_for_remove(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError> {
-        list_todos.show_all_todos(true)?;
         self.write_styled(
             "\nDigite o número do TODO que deseja DELETAR: ❌\n",
             Style::new().blue().bold(),

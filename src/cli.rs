@@ -50,13 +50,14 @@ impl TodoCli {
         self.user_interface.clean()?;
         self.user_interface
             .write_styled("\n📖 Os seus TODO's são:\n", Style::new().blue().bold())?;
-        self.todo_storage.show_all_todos(false)?;
+        self.show_all_todos(false)?;
         Ok(())
     }
 
     fn update_todo(&mut self) -> Result<(), TerminalError> {
         self.user_interface.clean()?;
         while self.check_list_is_empty(&*self.todo_storage) {
+            self.show_all_todos(true)?;
             match self.user_interface.get_todo_for_update(&*self.todo_storage) {
                 Ok((key, todo)) => {
                     self.todo_storage.update(key, todo);
@@ -76,6 +77,7 @@ impl TodoCli {
     fn delete_todo(&mut self) -> Result<(), TerminalError> {
         self.user_interface.clean()?;
         while self.check_list_is_empty(&*self.todo_storage) {
+            self.show_all_todos(true)?;
             match self
                 .user_interface
                 .get_id_todo_for_remove(&*self.todo_storage)
@@ -103,5 +105,18 @@ impl TodoCli {
             return false;
         }
         true
+    }
+
+    fn show_all_todos(&self, show_keys: bool) -> Result<(), TerminalError> {
+        for (key, todo) in self.todo_storage.get_collection() {
+            if show_keys {
+                self.user_interface
+                    .show_todo(todo, format!("{key}: ").as_str())?;
+            } else {
+                self.user_interface.show_todo(todo, "✅: ")?;
+            }
+        }
+
+        Ok(())
     }
 }

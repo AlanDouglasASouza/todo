@@ -1,4 +1,3 @@
-use crate::terminal::{Terminal, TerminalError, UserInterface};
 use crate::todo::Todo;
 use std::collections::BTreeMap;
 
@@ -19,10 +18,10 @@ impl Todos {
 pub trait TodoStorage {
     fn insert_todo(&mut self, todo: Todo);
     fn update(&mut self, id: u32, new_todo: Todo) -> bool;
-    fn show_all_todos(&self, show_keys: bool) -> Result<(), TerminalError>;
     fn get_one_todo(&self, key: u32) -> Option<&Todo>;
     fn remove(&mut self, key: u32);
     fn len(&self) -> usize;
+    fn get_collection(&self) -> &BTreeMap<u32, Todo>;
 }
 
 impl TodoStorage for Todos {
@@ -39,20 +38,6 @@ impl TodoStorage for Todos {
         false
     }
 
-    fn show_all_todos(&self, show_keys: bool) -> Result<(), TerminalError> {
-        let terminal = Terminal::new();
-
-        for (key, todo) in &self.todo_collection {
-            if show_keys {
-                terminal.show_todo(todo, format!("{key}: ").as_str())?;
-            } else {
-                terminal.show_todo(todo, "✅: ")?;
-            }
-        }
-
-        Ok(())
-    }
-
     fn get_one_todo(&self, key: u32) -> Option<&Todo> {
         self.todo_collection.get(&key)
     }
@@ -63,5 +48,9 @@ impl TodoStorage for Todos {
 
     fn len(&self) -> usize {
         self.todo_collection.len()
+    }
+
+    fn get_collection(&self) -> &BTreeMap<u32, Todo> {
+        &self.todo_collection
     }
 }
