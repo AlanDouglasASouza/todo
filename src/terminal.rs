@@ -29,16 +29,13 @@ pub trait UserInterface {
     fn show_error(&self, error: TerminalError);
     fn get_todo_for_update(
         &self,
-        list_todos: &Box<dyn TodoStorage>,
+        list_todos: &dyn TodoStorage,
     ) -> Result<(u32, Todo), TerminalError>;
-    fn get_id_todo_for_remove(
-        &self,
-        list_todos: &Box<dyn TodoStorage>,
-    ) -> Result<u32, TerminalError>;
+    fn get_id_todo_for_remove(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
     fn write_feedback(&self, feedback: &str) -> Result<(), TerminalError>;
     fn clean(&self) -> Result<(), TerminalError>;
-    fn ask_which_todo(&self, list_todos: &Box<dyn TodoStorage>) -> Result<u32, TerminalError>;
-    fn check_list_is_empty(&self, list: &Box<dyn TodoStorage>) -> bool;
+    fn ask_which_todo(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
+    fn check_list_is_empty(&self, list: &dyn TodoStorage) -> bool;
     fn input(&self) -> Result<String, TerminalError>;
     fn write_styled(&self, message: &str, style: Style) -> Result<(), TerminalError>;
     fn or_not_found<'a>(&self, maybe_todo: Option<&'a Todo>) -> Result<&'a Todo, TerminalError>;
@@ -116,7 +113,7 @@ impl UserInterface for Terminal {
 
     fn get_todo_for_update(
         &self,
-        list_todos: &Box<dyn TodoStorage>,
+        list_todos: &dyn TodoStorage,
     ) -> Result<(u32, Todo), TerminalError> {
         list_todos.show_all_todos(true)?;
         self.write_styled(
@@ -128,10 +125,7 @@ impl UserInterface for Terminal {
         Ok((key, new_todo))
     }
 
-    fn get_id_todo_for_remove(
-        &self,
-        list_todos: &Box<dyn TodoStorage>,
-    ) -> Result<u32, TerminalError> {
+    fn get_id_todo_for_remove(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError> {
         list_todos.show_all_todos(true)?;
         self.write_styled(
             "\nDigite o número do TODO que deseja DELETAR: ❌\n",
@@ -154,7 +148,7 @@ impl UserInterface for Terminal {
         Ok(())
     }
 
-    fn ask_which_todo(&self, list_todos: &Box<dyn TodoStorage>) -> Result<u32, TerminalError> {
+    fn ask_which_todo(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError> {
         let key = self.input()?.parse().map_err(TerminalError::ParseErr)?;
         let result = self.or_not_found(list_todos.get_one_todo(key))?;
         self.show_todo(result, "\n✅: ")?;
@@ -162,7 +156,7 @@ impl UserInterface for Terminal {
         Ok(key)
     }
 
-    fn check_list_is_empty(&self, list: &Box<dyn TodoStorage>) -> bool {
+    fn check_list_is_empty(&self, list: &dyn TodoStorage) -> bool {
         if list.len() < 1 {
             self.show_error(TerminalError::NotFound(
                 "A sua coleção de TODOs esta vazia".to_string(),
