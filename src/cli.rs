@@ -56,7 +56,7 @@ impl TodoCli {
 
     fn update_todo(&mut self) -> Result<(), TerminalError> {
         self.user_interface.clean()?;
-        while self.user_interface.check_list_is_empty(&*self.todo_storage) {
+        while self.check_list_is_empty(&*self.todo_storage) {
             match self.user_interface.get_todo_for_update(&*self.todo_storage) {
                 Ok((key, todo)) => {
                     self.todo_storage.update(key, todo);
@@ -75,7 +75,7 @@ impl TodoCli {
 
     fn delete_todo(&mut self) -> Result<(), TerminalError> {
         self.user_interface.clean()?;
-        while self.user_interface.check_list_is_empty(&*self.todo_storage) {
+        while self.check_list_is_empty(&*self.todo_storage) {
             match self
                 .user_interface
                 .get_id_todo_for_remove(&*self.todo_storage)
@@ -93,5 +93,15 @@ impl TodoCli {
             }
         }
         Ok(())
+    }
+
+    fn check_list_is_empty(&self, list: &dyn TodoStorage) -> bool {
+        if list.len() < 1 {
+            self.user_interface.show_error(TerminalError::NotFound(
+                "A sua coleção de TODOs esta vazia".to_string(),
+            ));
+            return false;
+        }
+        true
     }
 }
