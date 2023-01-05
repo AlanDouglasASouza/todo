@@ -20,7 +20,7 @@ pub trait TodoStorage {
     fn update(&mut self, id: u32, new_todo: Todo) -> bool;
     fn get_one_todo(&self, key: u32) -> Option<&Todo>;
     fn remove(&mut self, key: u32);
-    fn len(&self) -> usize;
+    fn is_empty(&self) -> usize;
     fn get_collection(&self) -> &BTreeMap<u32, Todo>;
 }
 
@@ -46,7 +46,7 @@ impl TodoStorage for Todos {
         self.todo_collection.remove(&key);
     }
 
-    fn len(&self) -> usize {
+    fn is_empty(&self) -> usize {
         self.todo_collection.len()
     }
 

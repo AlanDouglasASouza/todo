@@ -31,11 +31,10 @@ impl TodoCli {
                 UserCommand::Other => self.user_interface.show_invalid_option()?,
                 UserCommand::Exit => {
                     self.user_interface.finish_todo()?;
-                    break;
+                    return Ok(());
                 }
             }
-        }
-        Ok(())
+        }        
     }
 
     fn add_todo(&mut self) -> Result<(), TerminalError> {
@@ -98,7 +97,7 @@ impl TodoCli {
     }
 
     fn check_list_is_empty(&self, list: &dyn TodoStorage) -> bool {
-        if list.len() < 1 {
+        if list.is_empty() < 1 {
             self.user_interface.show_error(TerminalError::NotFound(
                 "A sua coleção de TODOs esta vazia".to_string(),
             ));
