@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter, Result};
 
 pub struct Todo {
     pub message: String,
+    pub resolved: bool
 }
 
 impl Display for Todo {

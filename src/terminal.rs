@@ -93,7 +93,7 @@ impl UserInterface for Terminal {
         self.write_styled("\nQual TODO deseja criar? 💬", Style::new().magenta())?;
         let new_todo = self.input()?;
 
-        Ok(Todo { message: new_todo })
+        Ok(Todo { message: new_todo, resolved: false })
     }
 
     fn show_todo(&self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError> {
