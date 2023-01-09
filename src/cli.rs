@@ -25,8 +25,8 @@ impl TodoCli {
 
             match self.user_interface.get_user_command()? {
                 UserCommand::Insert => self.add_todo()?,
-                UserCommand::Resolve => return Ok(()),
                 UserCommand::ShowTodos => self.show_todos()?,
+                UserCommand::Resolve => self.resolve_todo()?,
                 UserCommand::Update => self.update_todo()?,
                 UserCommand::Delete => self.delete_todo()?,
                 UserCommand::Other => self.user_interface.show_invalid_option()?,
@@ -49,7 +49,7 @@ impl TodoCli {
     fn show_todos(&self) -> Result<(), TerminalError> {
         self.user_interface.clean()?;
         self.user_interface
-            .write_styled("\n📖 Os seus TODO's são:\n", Style::new().blue().bold())?;
+            .write_styled("\nOs seus TODO's são: 📖\n", Style::new().blue().bold())?;
         self.show_all_todos(false)?;
         Ok(())
     }
@@ -113,10 +113,33 @@ impl TodoCli {
                 self.user_interface
                     .show_todo(todo, format!("{key}: ").as_str())?;
             } else {
-                self.user_interface.show_todo(todo, "✅: ")?;
+                self.user_interface.show_todo(todo, "⏳: ")?;
             }
         }
 
+        Ok(())
+    }
+
+    fn resolve_todo(&mut self) -> Result<(), TerminalError> {
+        self.user_interface.clean()?;
+        while self.check_list_is_empty(&*self.todo_storage) {
+            self.show_all_todos(true)?;
+            match self
+                .user_interface
+                .get_key_todo_resolve(&*self.todo_storage)
+            {
+                Ok(key) => {
+                    self.todo_storage.resolve_one_todo(key);
+                    self.user_interface
+                        .write_feedback("✅ TODO resolvido com sucesso! ✅")?;
+                    break;
+                }
+                Err(error) => {
+                    self.user_interface.clean()?;
+                    self.user_interface.show_error(error)
+                }
+            }
+        }
         Ok(())
     }
 }
