@@ -25,6 +25,7 @@ impl TodoCli {
 
             match self.user_interface.get_user_command()? {
                 UserCommand::Insert => self.add_todo()?,
+                UserCommand::Resolve => return Ok(()),
                 UserCommand::ShowTodos => self.show_todos()?,
                 UserCommand::Update => self.update_todo()?,
                 UserCommand::Delete => self.delete_todo()?,
@@ -34,7 +35,7 @@ impl TodoCli {
                     return Ok(());
                 }
             }
-        }        
+        }
     }
 
     fn add_todo(&mut self) -> Result<(), TerminalError> {
