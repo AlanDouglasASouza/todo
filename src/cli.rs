@@ -132,7 +132,7 @@ impl TodoCli {
                     self.todo_storage.resolve_one_todo(key);
                     self.user_interface
                         .write_feedback("✅ TODO resolvido com sucesso! ✅")?;
-                    break;
+                    return Ok(());
                 }
                 Err(error) => {
                     self.user_interface.clean()?;

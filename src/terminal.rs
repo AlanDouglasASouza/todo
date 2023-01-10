@@ -104,8 +104,8 @@ impl UserInterface for Terminal {
 
     fn show_todo(&self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError> {
         let todo_msg = match todo.resolved {
-            false => msg_initial.to_owned() + &style(&*todo.message).yellow().italic().to_string(),
-            true => "✅: ".to_owned() + &style(&*todo.message).yellow().italic().dim().to_string(),
+            false => format!("{msg_initial}{}", &style(&*todo.message).yellow().italic()),
+            true => format!("✅: {}", &style(&*todo.message).yellow().italic().dim()),
         };
 
         self.output

@@ -5,15 +5,6 @@ pub struct Todo {
     pub resolved: bool,
 }
 
-impl Todo {
-    pub fn resolve(&self) -> Self {
-        Self {
-            message: self.message.clone(),
-            resolved: true,
-        }
-    }
-}
-
 impl Display for Todo {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{}", self.message)
