@@ -5,6 +5,15 @@ pub struct Todo {
     pub resolved: bool,
 }
 
+impl Todo {
+    pub fn new(todo: String) -> Self {
+        Self {
+            message: todo,
+            resolved: false,
+        }
+    }
+}
+
 impl Display for Todo {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{}", self.message)

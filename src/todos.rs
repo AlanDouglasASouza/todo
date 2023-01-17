@@ -56,15 +56,10 @@ impl TodoStorage for Todos {
     }
 
     fn resolve_one_todo(&mut self, key: u32) -> bool {
-        match self.get_one_todo(key) {
-            Some(todo) => self.update(
-                key,
-                Todo {
-                    message: todo.message.clone(),
-                    resolved: true,
-                },
-            ),
-            None => false,
-        }
+        let Some(todo) = self.todo_collection.get_mut(&key) else {
+            return false;
+        };
+        todo.resolved = true;
+        true
     }
 }
