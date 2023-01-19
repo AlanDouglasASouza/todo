@@ -38,6 +38,7 @@ pub trait UserInterface {
     fn input(&self) -> Result<String, TerminalError>;
     fn write_styled(&self, message: &str, style: Style) -> Result<(), TerminalError>;
     fn or_not_found<'a>(&self, maybe_todo: Option<&'a Todo>) -> Result<&'a Todo, TerminalError>;
+    fn get_key_todo_resolve(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
 }
 
 impl UserInterface for Terminal {
@@ -47,9 +48,10 @@ impl UserInterface for Terminal {
         match response.trim() {
             "1" => Ok(UserCommand::Insert),
             "2" => Ok(UserCommand::ShowTodos),
-            "3" => Ok(UserCommand::Update),
-            "4" => Ok(UserCommand::Delete),
-            "5" => Ok(UserCommand::Exit),
+            "3" => Ok(UserCommand::Resolve),
+            "4" => Ok(UserCommand::Update),
+            "5" => Ok(UserCommand::Delete),
+            "0" => Ok(UserCommand::Exit),
             _ => Ok(UserCommand::Other),
         }
     }
@@ -63,9 +65,10 @@ impl UserInterface for Terminal {
             r"
     1 - Para CRIAR um TODO
     2 - Para LISTAR todos os seus TODO's
-    3 - Para ALTERAR um TODO existente
-    4 - Para DELETAR um TODO
-    5 - Para SAIR
+    3 - Para RESOLVER UM TODO
+    4 - Para ALTERAR um TODO existente
+    5 - Para DELETAR um TODO
+    0 - Para SAIR
     ",
             Style::new().white(),
         )?;
@@ -93,15 +96,17 @@ impl UserInterface for Terminal {
         self.write_styled("\nQual TODO deseja criar? 💬", Style::new().magenta())?;
         let new_todo = self.input()?;
 
-        Ok(Todo { message: new_todo })
+        Ok(Todo::new(new_todo))
     }
 
     fn show_todo(&self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError> {
-        let todo_style = style(&*todo.message).yellow().italic();
-        let todo_msg = msg_initial.to_owned() + &todo_style.to_string();
+        let todo_msg = match todo.resolved {
+            false => format!("{msg_initial}{}", &style(&*todo.message).yellow().italic()),
+            true => format!("✅: {}", &style(&*todo.message).yellow().italic().dim()),
+        };
 
         self.output
-            .write_line(&todo_msg.to_string())
+            .write_line(&todo_msg)
             .map_err(TerminalError::StdoutErr)?;
         Ok(())
     }
@@ -170,6 +175,15 @@ impl UserInterface for Terminal {
         maybe_todo.ok_or(TerminalError::NotFound(
             "❗ O valor consultado não existe ❗".to_string(),
         ))
+    }
+
+    fn get_key_todo_resolve(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError> {
+        self.write_styled(
+            "\nDigite o número do TODO que deseja RESOLVER: ✅\n",
+            Style::new().blue().bold(),
+        )?;
+        let key = self.ask_which_todo(list_todos)?;
+        Ok(key)
     }
 }
 

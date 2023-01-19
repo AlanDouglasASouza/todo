@@ -5,4 +5,5 @@ pub enum UserCommand {
     Delete,
     ShowTodos,
     Other,
+    Resolve,
 }
