@@ -1,49 +1,49 @@
 use crate::command::UserCommand;
 use crate::todo::Todo;
-use crate::todos::TodoStorage;
 use console::{style, Style, Term};
 use std::io::Error;
 use std::num::ParseIntError;
 
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Stdin, Stdout};
+
 pub struct Terminal {
-    input: Term,
-    output: Term,
+    input: BufReader<Stdin>,
+    output: Stdout,
 }
 
 impl Terminal {
     pub fn new() -> Self {
         Self {
-            input: Term::stdout(),
-            output: Term::stdout(),
+            input: BufReader::new(tokio::io::stdin()),
+            output: tokio::io::stdout(),
         }
     }
 }
 
+#[async_trait::async_trait]
 pub trait UserInterface {
-    fn get_user_command(&self) -> Result<UserCommand, TerminalError>;
-    fn show_options(&self) -> Result<(), TerminalError>;
-    fn finish_todo(&self) -> Result<(), TerminalError>;
-    fn show_invalid_option(&self) -> Result<(), TerminalError>;
-    fn ask_for_new_todo(&self) -> Result<Todo, TerminalError>;
-    fn show_todo(&self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError>;
+    async fn get_user_command(&mut self) -> Result<UserCommand, TerminalError>;
+    async fn show_options(&mut self) -> Result<(), TerminalError>;
+    async fn finish_todo(&mut self) -> Result<(), TerminalError>;
+    async fn show_invalid_option(&mut self) -> Result<(), TerminalError>;
+    async fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError>;
+    async fn show_todo(&mut self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError>;
     fn show_error(&self, error: TerminalError);
-    fn get_todo_for_update(
-        &self,
-        list_todos: &dyn TodoStorage,
-    ) -> Result<(u32, Todo), TerminalError>;
-    fn get_id_todo_for_remove(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
-    fn write_feedback(&self, feedback: &str) -> Result<(), TerminalError>;
+    async fn ask_key_todo_update(&mut self) -> Result<(), TerminalError>;
+    async fn ask_key_todo_delete(&mut self) -> Result<(), TerminalError>;
+    async fn write_feedback(&mut self, feedback: &str) -> Result<(), TerminalError>;
     fn clean(&self) -> Result<(), TerminalError>;
-    fn ask_which_todo(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
-    fn input(&self) -> Result<String, TerminalError>;
-    fn write_styled(&self, message: &str, style: Style) -> Result<(), TerminalError>;
+    async fn parse_user_option(&mut self) -> Result<u32, TerminalError>;
+    async fn input(&mut self) -> Result<String, TerminalError>;
+    async fn write_styled(&mut self, message: &str, style: Style) -> Result<(), TerminalError>;
     fn or_not_found<'a>(&self, maybe_todo: Option<&'a Todo>) -> Result<&'a Todo, TerminalError>;
-    fn get_key_todo_resolve(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError>;
+    async fn get_key_todo_resolve(&mut self) -> Result<(), TerminalError>;
 }
 
+#[async_trait::async_trait]
 impl UserInterface for Terminal {
-    fn get_user_command(&self) -> Result<UserCommand, TerminalError> {
-        let response = self.input()?;
+    async fn get_user_command(&mut self) -> Result<UserCommand, TerminalError> {
+        let response = self.input().await?;
 
         match response.trim() {
             "1" => Ok(UserCommand::Insert),
@@ -56,11 +56,12 @@ impl UserInterface for Terminal {
         }
     }
 
-    fn show_options(&self) -> Result<(), TerminalError> {
+    async fn show_options(&mut self) -> Result<(), TerminalError> {
         self.write_styled(
-            "\nEscolha uma opção para usar seu TODO LIST 🤔",
+            "\nEscolha uma opção para usar seu TODO LIST 🤔\n",
             Style::new().magenta(),
-        )?;
+        )
+        .await?;
         self.write_styled(
             r"
     1 - Para CRIAR um TODO
@@ -71,42 +72,47 @@ impl UserInterface for Terminal {
     0 - Para SAIR
     ",
             Style::new().white(),
-        )?;
+        )
+        .await?;
         Ok(())
     }
 
-    fn finish_todo(&self) -> Result<(), TerminalError> {
+    async fn finish_todo(&mut self) -> Result<(), TerminalError> {
         self.write_styled(
             "\n😁 Ok!! Todo list finalizado! 🤠\n",
             Style::new().magenta(),
-        )?;
+        )
+        .await?;
         Ok(())
     }
 
-    fn show_invalid_option(&self) -> Result<(), TerminalError> {
+    async fn show_invalid_option(&mut self) -> Result<(), TerminalError> {
         self.clean()?;
         self.write_styled(
-            "\n🙁 Desculpe esse comando não é válido para esse processo...",
+            "\n🙁 Desculpe esse comando não é válido para esse processo...\n",
             Style::new().blue(),
-        )?;
+        )
+        .await?;
         Ok(())
     }
 
-    fn ask_for_new_todo(&self) -> Result<Todo, TerminalError> {
-        self.write_styled("\nQual TODO deseja criar? 💬", Style::new().magenta())?;
-        let new_todo = self.input()?;
+    async fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError> {        
+        let style = Style::new().magenta();
+        println!("{} 💬\n", style.apply_to("\nQual TODO deseja criar?"));
+        let new_todo = self.input().await?;
 
         Ok(Todo::new(new_todo))
     }
 
-    fn show_todo(&self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError> {
+    async fn show_todo(&mut self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError> {
         let todo_msg = match todo.resolved {
             false => format!("{msg_initial}{}", &style(&*todo.message).yellow().italic()),
             true => format!("✅: {}", &style(&*todo.message).yellow().italic().dim()),
         };
 
         self.output
-            .write_line(&todo_msg)
+            .write(&todo_msg.as_bytes())
+            .await
             .map_err(TerminalError::StdoutErr)?;
         Ok(())
     }
@@ -115,58 +121,61 @@ impl UserInterface for Terminal {
         eprintln!("{}\n", style(error.message_err()).red().bold());
     }
 
-    fn get_todo_for_update(
-        &self,
-        list_todos: &dyn TodoStorage,
-    ) -> Result<(u32, Todo), TerminalError> {
+    async fn ask_key_todo_update(&mut self) -> Result<(), TerminalError> {
         self.write_styled(
             "\nDigite o número do TODO que deseja ALTERAR:\n",
             Style::new().blue().bold(),
-        )?;
-        let key = self.ask_which_todo(list_todos)?;
-        let new_todo = self.ask_for_new_todo()?;
-        Ok((key, new_todo))
+        )
+        .await?;
+        
+        Ok(())
     }
 
-    fn get_id_todo_for_remove(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError> {
+    async fn ask_key_todo_delete(&mut self) -> Result<(), TerminalError> {
         self.write_styled(
             "\nDigite o número do TODO que deseja DELETAR: ❌\n",
             Style::new().blue().bold(),
-        )?;
-        let key = self.ask_which_todo(list_todos)?;
-        Ok(key)
+        )
+        .await?;
+        Ok(())
     }
 
-    fn write_feedback(&self, feedback: &str) -> Result<(), TerminalError> {
+    async fn write_feedback(&mut self, feedback: &str) -> Result<(), TerminalError> {
         self.clean()?;
-        self.write_styled(feedback, Style::new().green().bold())?;
+        self.write_styled(feedback, Style::new().green().bold())
+            .await?;
         Ok(())
     }
 
     fn clean(&self) -> Result<(), TerminalError> {
-        self.output
+        Term::stdout()
             .clear_screen()
             .map_err(TerminalError::StdoutErr)?;
+
         Ok(())
     }
 
-    fn ask_which_todo(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError> {
-        let key = self.input()?.parse().map_err(TerminalError::ParseErr)?;
-        let result = self.or_not_found(list_todos.get_one_todo(key))?;
-        self.show_todo(result, "\n✅: ")?;
-
+    async fn parse_user_option(&mut self) -> Result<u32, TerminalError> {       
+        let user_input = self.input().await?;
+        let key = user_input.trim().parse().map_err(TerminalError::ParseErr)?;
+        
         Ok(key)
     }
 
-    fn input(&self) -> Result<String, TerminalError> {
-        let response = self.input.read_line().map_err(TerminalError::StdinErr)?;
+    async fn input(&mut self) -> Result<String, TerminalError> {
+        let mut response = String::new();
+        self.input
+            .read_line(&mut response)
+            .await
+            .map_err(TerminalError::StdinErr)?;
         Ok(response)
     }
 
-    fn write_styled(&self, message: &str, style: Style) -> Result<(), TerminalError> {
+    async fn write_styled(&mut self, message: &str, style: Style) -> Result<(), TerminalError> {
         let msg_styled = style.apply_to(message);
         self.output
-            .write_line(&msg_styled.to_string())
+            .write(&msg_styled.to_string().as_bytes())
+            .await
             .map_err(TerminalError::StdoutErr)?;
         Ok(())
     }
@@ -177,13 +186,14 @@ impl UserInterface for Terminal {
         ))
     }
 
-    fn get_key_todo_resolve(&self, list_todos: &dyn TodoStorage) -> Result<u32, TerminalError> {
+    async fn get_key_todo_resolve(&mut self) -> Result<(), TerminalError> {
         self.write_styled(
             "\nDigite o número do TODO que deseja RESOLVER: ✅\n",
             Style::new().blue().bold(),
-        )?;
-        let key = self.ask_which_todo(list_todos)?;
-        Ok(key)
+        )
+        .await?;
+        
+        Ok(())
     }
 }
 
