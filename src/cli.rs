@@ -17,6 +17,7 @@ impl TodoCli {
     }
 
     pub async fn run(&mut self) -> Result<(), TerminalError> {
+        self.todo_storage.parse_file_for_todos().await?;
         self.user_interface
             .write_styled("Olá! 😃\n", Style::new().magenta())
             .await?;
@@ -43,7 +44,7 @@ impl TodoCli {
         self.user_interface.clean()?;
         let todo = self.user_interface.ask_for_new_todo().await?;
         self.user_interface.show_todo(&todo, "\n✅: ").await?;
-        self.todo_storage.insert_todo(todo);
+        self.todo_storage.insert_todo(todo).await?;
         Ok(())
     }
 
@@ -63,21 +64,21 @@ impl TodoCli {
             self.user_interface.ask_key_todo_update().await?;
 
             match self.user_interface.parse_user_option().await {
-                Ok(key) => {                   
+                Ok(key) => {
                     if self.todo_is_found(key, "").await? {
                         let todo = self.user_interface.ask_for_new_todo().await?;
-                        self.todo_storage.update(key, todo);
+                        self.todo_storage.update(key, todo).await?;
                         self.user_interface
                             .write_feedback("\n✅ TODO atualizado com sucesso! ✅\n")
                             .await?;
-                            return Ok(());                       
-                    }                    
+                        return Ok(());
+                    }
                 }
                 Err(error) => {
                     self.user_interface.clean()?;
                     self.user_interface.show_error(error)
                 }
-            }            
+            }
         }
         Ok(())
     }
@@ -90,10 +91,13 @@ impl TodoCli {
 
             match self.user_interface.parse_user_option().await {
                 Ok(key) => {
-                    if self.todo_is_found(key, "\n❌ O TODO foi excluído com sucesso! ❌\n").await? {
-                        self.todo_storage.remove(key);
+                    if self
+                        .todo_is_found(key, "\n❌ O TODO foi excluído com sucesso! ❌\n")
+                        .await?
+                    {
+                        self.todo_storage.remove(key).await?;
                         return Ok(());
-                    }                    
+                    }
                 }
                 Err(error) => {
                     self.user_interface.clean()?;
@@ -134,16 +138,15 @@ impl TodoCli {
             self.show_all_todos(true).await?;
             self.user_interface.get_key_todo_resolve().await?;
 
-            match self
-                .user_interface
-                .parse_user_option()
-                .await
-            {
-                Ok(key) => {                    
-                    if self.todo_is_found(key, "\n✅ TODO resolvido com sucesso! ✅\n").await? {
-                        self.todo_storage.resolve_one_todo(key);
+            match self.user_interface.parse_user_option().await {
+                Ok(key) => {
+                    if self
+                        .todo_is_found(key, "\n✅ TODO resolvido com sucesso! ✅\n")
+                        .await?
+                    {
+                        self.todo_storage.resolve_one_todo(key).await?;
                         return Ok(());
-                    }                    
+                    }
                 }
                 Err(error) => {
                     self.user_interface.clean()?;
@@ -160,17 +163,15 @@ impl TodoCli {
             .or_not_found(self.todo_storage.get_one_todo(key));
         match result {
             Ok(todo) => {
-                self.user_interface.show_todo(todo, "\n✅: ").await?;
-                self.user_interface
-                        .write_feedback(feedback)
-                        .await?;
+                self.user_interface.show_todo(todo, "\n✅ ").await?;
+                self.user_interface.write_feedback(feedback).await?;
                 Ok(true)
-            },
+            }
             Err(error) => {
                 self.user_interface.clean()?;
                 self.user_interface.show_error(error);
                 Ok(false)
             }
-        }                
+        }
     }
 }

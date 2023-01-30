@@ -3,7 +3,6 @@ use crate::todo::Todo;
 use console::{style, Style, Term};
 use std::io::Error;
 use std::num::ParseIntError;
-
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Stdin, Stdout};
 
 pub struct Terminal {
@@ -96,7 +95,7 @@ impl UserInterface for Terminal {
         Ok(())
     }
 
-    async fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError> {        
+    async fn ask_for_new_todo(&mut self) -> Result<Todo, TerminalError> {
         let style = Style::new().magenta();
         println!("{} 💬\n", style.apply_to("\nQual TODO deseja criar?"));
         let new_todo = self.input().await?;
@@ -107,7 +106,7 @@ impl UserInterface for Terminal {
     async fn show_todo(&mut self, todo: &Todo, msg_initial: &str) -> Result<(), TerminalError> {
         let todo_msg = match todo.resolved {
             false => format!("{msg_initial}{}", &style(&*todo.message).yellow().italic()),
-            true => format!("✅: {}", &style(&*todo.message).yellow().italic().dim()),
+            true => format!("✅  {}", &style(&*todo.message).yellow().italic().dim()),
         };
 
         self.output
@@ -127,7 +126,7 @@ impl UserInterface for Terminal {
             Style::new().blue().bold(),
         )
         .await?;
-        
+
         Ok(())
     }
 
@@ -155,10 +154,10 @@ impl UserInterface for Terminal {
         Ok(())
     }
 
-    async fn parse_user_option(&mut self) -> Result<u32, TerminalError> {       
+    async fn parse_user_option(&mut self) -> Result<u32, TerminalError> {
         let user_input = self.input().await?;
         let key = user_input.trim().parse().map_err(TerminalError::ParseErr)?;
-        
+
         Ok(key)
     }
 
@@ -192,7 +191,7 @@ impl UserInterface for Terminal {
             Style::new().blue().bold(),
         )
         .await?;
-        
+
         Ok(())
     }
 }
