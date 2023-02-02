@@ -41,8 +41,9 @@ impl TodoStorage for Todos {
     }
 
     async fn update(&mut self, id: u32, new_todo: Todo) -> Result<bool, TerminalError> {
-        if self.todo_collection.contains_key(&id) {
-            self.todo_collection.insert(id, new_todo);
+        if let std::collections::btree_map::Entry::Occupied(mut e) = self.todo_collection.entry(id)
+        {
+            e.insert(new_todo);
             self.parse_map_write_file().await?;
             return Ok(true);
         }
@@ -96,25 +97,19 @@ impl TodoStorage for Todos {
             });
         }
 
-        self.length = match self
+        self.length = self
             .todo_collection
             .keys()
             .cloned()
             .collect::<Vec<u32>>()
             .pop()
-        {
-            Some(key) => key,
-            None => 0,
-        };
+            .unwrap_or(0);
         Ok(())
     }
 
     fn parse_line_for_todo(&mut self, line: &str) -> Result<(u32, String, bool), TerminalError> {
-        let mut text_slice: Vec<&str> = line.split("-").collect();
-        let resolve = match text_slice.remove(1) {
-            "true" => true,
-            _ => false,
-        };
+        let mut text_slice: Vec<&str> = line.split('-').collect();
+        let resolve = matches!(text_slice.remove(1), "true");
         let key: u32 = text_slice
             .remove(0)
             .parse()
@@ -133,7 +128,7 @@ impl TodoStorage for Todos {
             .todo_collection
             .iter()
             .map(|(key, todo)| {
-                format!("{key}-{}-{}", todo.resolved, todo.message.replace("\n", ""))
+                format!("{key}-{}-{}", todo.resolved, todo.message.replace('\n', ""))
             })
             .collect::<Vec<String>>()
             .join("\n");
