@@ -19,13 +19,13 @@ impl Todos {
 
 #[async_trait::async_trait]
 pub trait TodoStorage {
-    async fn insert_todo(&mut self, todo: Todo) -> Result<(), TerminalError>;
-    async fn update(&mut self, id: u32, new_todo: Todo) -> Result<bool, TerminalError>;
+    fn insert_todo(&mut self, todo: Todo);
+    fn update(&mut self, id: u32, new_todo: Todo) -> bool;
     fn get_one_todo(&self, key: u32) -> Option<&Todo>;
-    async fn remove(&mut self, key: u32) -> Result<(), TerminalError>;
+    fn remove(&mut self, key: u32);
     fn is_empty(&self) -> usize;
     fn get_collection(&self) -> &BTreeMap<u32, Todo>;
-    async fn resolve_one_todo(&mut self, key: u32) -> Result<bool, TerminalError>;
+    fn resolve_one_todo(&mut self, key: u32) -> bool;
     async fn parse_file_for_todos(&mut self) -> Result<(), TerminalError>;
     fn parse_line_for_todo(&mut self, line: &str) -> Result<(u32, String, bool), TerminalError>;
     async fn parse_map_write_file(&mut self) -> Result<(), TerminalError>;
@@ -33,30 +33,25 @@ pub trait TodoStorage {
 
 #[async_trait::async_trait]
 impl TodoStorage for Todos {
-    async fn insert_todo(&mut self, todo: Todo) -> Result<(), TerminalError> {
+    fn insert_todo(&mut self, todo: Todo) {
         self.length += 1;
         self.todo_collection.entry(self.length).or_insert(todo);
-        self.parse_map_write_file().await?;
-        Ok(())
     }
 
-    async fn update(&mut self, id: u32, new_todo: Todo) -> Result<bool, TerminalError> {
+    fn update(&mut self, id: u32, new_todo: Todo) -> bool {
         if self.todo_collection.contains_key(&id) {
             self.todo_collection.insert(id, new_todo);
-            self.parse_map_write_file().await?;
-            return Ok(true);
+            return true;
         }
-        Ok(false)
+        false
     }
 
     fn get_one_todo(&self, key: u32) -> Option<&Todo> {
         self.todo_collection.get(&key)
     }
 
-    async fn remove(&mut self, key: u32) -> Result<(), TerminalError> {
+    fn remove(&mut self, key: u32) {
         self.todo_collection.remove(&key);
-        self.parse_map_write_file().await?;
-        Ok(())
     }
 
     fn is_empty(&self) -> usize {
@@ -67,20 +62,12 @@ impl TodoStorage for Todos {
         &self.todo_collection
     }
 
-    async fn resolve_one_todo(&mut self, key: u32) -> Result<bool, TerminalError> {
-        match self.todo_collection.get(&key) {
-            Some(todo) => self.todo_collection.insert(
-                key,
-                Todo {
-                    message: todo.message.clone(),
-                    resolved: true,
-                },
-            ),
-            None => return Ok(false),
+    fn resolve_one_todo(&mut self, key: u32) -> bool {
+        let Some(todo) = self.todo_collection.get_mut(&key) else {
+            return false;
         };
-
-        self.parse_map_write_file().await?;
-        Ok(true)
+        todo.resolved = true;
+        true
     }
 
     async fn parse_file_for_todos(&mut self) -> Result<(), TerminalError> {
@@ -91,7 +78,7 @@ impl TodoStorage for Todos {
         for line in todo_file.lines() {
             let (key, todo_message, resolve) = self.parse_line_for_todo(line)?;
             self.todo_collection.entry(key).or_insert(Todo {
-                message: todo_message,
+                message: format!("{todo_message}\n"),
                 resolved: resolve,
             });
         }
@@ -110,20 +97,23 @@ impl TodoStorage for Todos {
     }
 
     fn parse_line_for_todo(&mut self, line: &str) -> Result<(u32, String, bool), TerminalError> {
-        let mut text_slice: Vec<&str> = line.split("-").collect();
-        let resolve = match text_slice.remove(1) {
-            "true" => true,
-            _ => false,
-        };
+        let mut text_slice = line.split("-");
         let key: u32 = text_slice
-            .remove(0)
+            .next()
+            .ok_or(TerminalError::NotFound(
+                "Erro no parse_line [key not found]".to_string(),
+            ))?
             .parse()
             .map_err(TerminalError::ParseErr)?;
-        let message = text_slice
-            .iter()
-            .map(|slice| format!("{slice}\n"))
-            .collect::<Vec<String>>()
-            .join("-");
+
+        let resolve = matches!(
+            text_slice.next().ok_or(TerminalError::NotFound(
+                "Erro no parse_line [resolve not found]".to_string()
+            ))?,
+            "true"
+        );
+
+        let message = text_slice.collect::<Vec<&str>>().join("-");
 
         Ok((key, message, resolve))
     }
@@ -132,11 +122,9 @@ impl TodoStorage for Todos {
         let todo_string = self
             .todo_collection
             .iter()
-            .map(|(key, todo)| {
-                format!("{key}-{}-{}", todo.resolved, todo.message.replace("\n", ""))
-            })
+            .map(|(key, todo)| format!("{key}-{}-{}", todo.resolved, todo.message))
             .collect::<Vec<String>>()
-            .join("\n");
+            .join("");
 
         write("todo_list.txt", todo_string.as_bytes())
             .await

@@ -44,7 +44,9 @@ impl TodoCli {
         self.user_interface.clean()?;
         let todo = self.user_interface.ask_for_new_todo().await?;
         self.user_interface.show_todo(&todo, "\n✅: ").await?;
-        self.todo_storage.insert_todo(todo).await?;
+        self.todo_storage.insert_todo(todo);
+        self.todo_storage.parse_map_write_file().await?;
+
         Ok(())
     }
 
@@ -67,7 +69,8 @@ impl TodoCli {
                 Ok(key) => {
                     if self.todo_is_found(key, "").await? {
                         let todo = self.user_interface.ask_for_new_todo().await?;
-                        self.todo_storage.update(key, todo).await?;
+                        self.todo_storage.update(key, todo);
+                        self.todo_storage.parse_map_write_file().await?;
                         self.user_interface
                             .write_feedback("\n✅ TODO atualizado com sucesso! ✅\n")
                             .await?;
@@ -95,7 +98,8 @@ impl TodoCli {
                         .todo_is_found(key, "\n❌ O TODO foi excluído com sucesso! ❌\n")
                         .await?
                     {
-                        self.todo_storage.remove(key).await?;
+                        self.todo_storage.remove(key);
+                        self.todo_storage.parse_map_write_file().await?;
                         return Ok(());
                     }
                 }
@@ -144,7 +148,8 @@ impl TodoCli {
                         .todo_is_found(key, "\n✅ TODO resolvido com sucesso! ✅\n")
                         .await?
                     {
-                        self.todo_storage.resolve_one_todo(key).await?;
+                        self.todo_storage.resolve_one_todo(key);
+                        self.todo_storage.parse_map_write_file().await?;
                         return Ok(());
                     }
                 }
