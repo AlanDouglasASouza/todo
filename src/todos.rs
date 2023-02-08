@@ -39,8 +39,9 @@ impl TodoStorage for Todos {
     }
 
     fn update(&mut self, id: u32, new_todo: Todo) -> bool {
-        if self.todo_collection.contains_key(&id) {
-            self.todo_collection.insert(id, new_todo);
+        if let std::collections::btree_map::Entry::Occupied(mut e) = self.todo_collection.entry(id)
+        {
+            e.insert(new_todo);
             return true;
         }
         false
@@ -83,31 +84,28 @@ impl TodoStorage for Todos {
             });
         }
 
-        self.length = match self
+        self.length = self
             .todo_collection
             .keys()
             .cloned()
             .collect::<Vec<u32>>()
             .pop()
-        {
-            Some(key) => key,
-            None => 0,
-        };
+            .unwrap_or(0);
         Ok(())
     }
 
     fn parse_line_for_todo(&mut self, line: &str) -> Result<(u32, String, bool), TerminalError> {
-        let mut text_slice = line.split("-");
+        let mut text_slice = line.split('-');
         let key: u32 = text_slice
             .next()
-            .ok_or(TerminalError::NotFound(
-                "Erro no parse_line [key not found]".to_string(),
-            ))?
+            .ok_or_else(|| {
+                TerminalError::NotFound("Erro no parse_line [key not found]".to_string())
+            })?
             .parse()
             .map_err(TerminalError::ParseErr)?;
 
         let resolve = matches!(
-            text_slice.next().ok_or(TerminalError::NotFound(
+            text_slice.next().ok_or_else(|| TerminalError::NotFound(
                 "Erro no parse_line [resolve not found]".to_string()
             ))?,
             "true"

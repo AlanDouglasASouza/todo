@@ -1,2 +1,2 @@
-1-false-Amor
+1-true-Amor
 2-true-Escola
