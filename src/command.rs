@@ -1,3 +1,5 @@
+/* #[derive(PartialEq)]
+#[derive(Debug)] */
 pub enum UserCommand {
     Update,
     Insert,

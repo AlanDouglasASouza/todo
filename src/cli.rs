@@ -3,7 +3,7 @@ use crate::terminal::{TerminalError, UserInterface};
 use crate::todos::TodoStorage;
 use console::Style;
 
-pub(crate) struct TodoCli {
+pub struct TodoCli {
     pub user_interface: Box<dyn UserInterface>,
     todo_storage: Box<dyn TodoStorage>,
 }
@@ -17,7 +17,9 @@ impl TodoCli {
     }
 
     pub async fn run(&mut self) -> Result<(), TerminalError> {
-        self.todo_storage.parse_file_for_todos().await?;
+        self.todo_storage
+            .parse_file_for_todos("todo_list.txt")
+            .await?;
         self.user_interface
             .write_styled("Olá! 😃\n", Style::new().magenta())
             .await?;
@@ -45,7 +47,9 @@ impl TodoCli {
         let todo = self.user_interface.ask_for_new_todo().await?;
         self.user_interface.show_todo(&todo, "\n✅: ").await?;
         self.todo_storage.insert_todo(todo);
-        self.todo_storage.parse_map_write_file().await?;
+        self.todo_storage
+            .parse_map_write_file("todo_list.txt")
+            .await?;
 
         Ok(())
     }
@@ -70,7 +74,9 @@ impl TodoCli {
                     if self.todo_is_found(key, "").await? {
                         let todo = self.user_interface.ask_for_new_todo().await?;
                         self.todo_storage.update(key, todo);
-                        self.todo_storage.parse_map_write_file().await?;
+                        self.todo_storage
+                            .parse_map_write_file("todo_list.txt")
+                            .await?;
                         self.user_interface
                             .write_feedback("\n✅ TODO atualizado com sucesso! ✅\n")
                             .await?;
@@ -99,7 +105,9 @@ impl TodoCli {
                         .await?
                     {
                         self.todo_storage.remove(key);
-                        self.todo_storage.parse_map_write_file().await?;
+                        self.todo_storage
+                            .parse_map_write_file("todo_list.txt")
+                            .await?;
                         return Ok(());
                     }
                 }
@@ -149,7 +157,9 @@ impl TodoCli {
                         .await?
                     {
                         self.todo_storage.resolve_one_todo(key);
-                        self.todo_storage.parse_map_write_file().await?;
+                        self.todo_storage
+                            .parse_map_write_file("todo_list.txt")
+                            .await?;
                         return Ok(());
                     }
                 }
@@ -168,7 +178,7 @@ impl TodoCli {
             .or_not_found(self.todo_storage.get_one_todo(key));
         match result {
             Ok(todo) => {
-                self.user_interface.show_todo(todo, "\n✅ ").await?;
+                self.user_interface.show_todo(&todo, "\n✅ ").await?;
                 self.user_interface.write_feedback(feedback).await?;
                 Ok(true)
             }
@@ -178,5 +188,150 @@ impl TodoCli {
                 Ok(false)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::todo::*;
+    use crate::todo::mocks::_Factori_Builder_Todo;
+    use crate::{terminal::MockUserInterface, todos::MockTodoStorage};
+    use std::collections::BTreeMap;
+
+    fn create_mocks() -> (MockUserInterface, MockTodoStorage) {
+        let mut list = BTreeMap::<u32, Todo>::new();
+        list.entry(1).or_insert(factori::create!(Todo));
+
+        let mut mock_user_interface = MockUserInterface::new();
+        mock_user_interface.expect_clean().returning(|| Ok(()));
+        mock_user_interface
+            .expect_ask_key_todo_update()            
+            .return_once(move || Ok(()));
+        mock_user_interface
+            .expect_parse_user_option()
+            .returning(|| Ok(1));
+        mock_user_interface
+            .expect_write_feedback()
+            .returning(|_| Ok(()));
+        mock_user_interface
+            .expect_or_not_found()
+            .returning(|_| Ok(Todo::new("boo".to_string())));
+        mock_user_interface
+            .expect_get_key_todo_resolve()
+            .returning(|| Ok(()));
+        mock_user_interface
+            .expect_ask_key_todo_delete()
+            .return_once(|| Ok(()));
+
+        let mut mock_storage = MockTodoStorage::new();
+        mock_storage
+            .expect_parse_map_write_file()
+            .returning(|_| Ok(()));
+        mock_storage.expect_insert_todo().return_once(|_| ());
+        mock_storage.expect_get_collection().return_const(list);
+        mock_storage
+            .expect_update()
+            .withf(|key, todo| key == &1 && todo.message == "boo")
+            .return_once(|_, _| true);
+        mock_storage.expect_is_empty().returning(|| 1);
+        mock_storage
+            .expect_get_one_todo()
+            .returning(|_| Some(Todo::new("boo".to_string())));
+        mock_storage.expect_resolve_one_todo().return_once(|_| true);
+        mock_storage.expect_remove().return_once(|_| ());
+        mock_storage.expect_parse_file_for_todos().withf(|path| path == "todo_list.txt").return_once(|_| Ok(()));
+
+        (mock_user_interface, mock_storage)
+    }
+
+    #[tokio::test]
+    async fn test_cli_run() {
+        let (mut mock_user_interface, mock_storage) = create_mocks();
+       
+        mock_user_interface
+            .expect_show_options()           
+            .returning(|| Ok(()));
+        mock_user_interface
+            .expect_write_styled()           
+            .returning(|_,_| Ok(()));
+        
+        mock_user_interface
+            .expect_get_user_command()       
+            .return_once(|| Ok(UserCommand::Exit));
+        mock_user_interface
+            .expect_finish_todo()       
+            .returning(|| Ok(())); 
+
+
+        let mut cli = TodoCli {
+            user_interface: Box::new(mock_user_interface),
+            todo_storage: Box::new(mock_storage),
+        };
+
+        cli.run().await.unwrap();        
+    }
+
+    #[tokio::test]
+    async fn add_todo_and_verify_if_exist_with_show_todo() {
+        let (mut mock_user_interface, mock_storage) = create_mocks();
+
+        mock_user_interface
+            .expect_ask_for_new_todo()
+            .times(1)
+            .return_once(|| Ok(factori::create!(Todo)));
+        mock_user_interface
+            .expect_show_todo()            
+            .withf(|todo, _| todo.message == "foo")
+            .returning(|_, _| Ok(()));
+
+        let mut cli = TodoCli {
+            user_interface: Box::new(mock_user_interface),
+            todo_storage: Box::new(mock_storage),
+        };
+
+        cli.add_todo().await.unwrap();
+        cli.show_all_todos(true).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_update_todo() {
+        let (mut mock_user_interface, mock_storage) = create_mocks();
+        mock_user_interface
+            .expect_ask_for_new_todo()
+            .times(1)
+            .return_once(|| Ok(Todo::new("boo".to_string())));
+        mock_user_interface
+            .expect_show_todo()
+            .withf(|todo, _| todo.message == "foo")
+            .return_once(|_, _| Ok(()));
+        mock_user_interface
+            .expect_show_todo()
+            .withf(|todo, _| todo.message == "boo")
+            .return_once(|_, _| Ok(()));
+
+        let mut cli = TodoCli {
+            user_interface: Box::new(mock_user_interface),
+            todo_storage: Box::new(mock_storage),
+        };
+        cli.update_todo().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_resolve_and_delete_todo() {
+        let (mut mock_user_interface, mock_storage) = create_mocks();
+
+        mock_user_interface
+            .expect_show_todo()
+            .withf(|todo, _| todo.message.contains("oo"))
+            .returning(|_, _| Ok(()));
+
+        let mut cli = TodoCli {
+            user_interface: Box::new(mock_user_interface),
+            todo_storage: Box::new(mock_storage),
+        };
+
+        cli.resolve_todo().await.unwrap();
+        cli.delete_todo().await.unwrap();
     }
 }

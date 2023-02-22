@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
+#[derive(Clone /* , Debug, PartialEq */)]
 pub struct Todo {
     pub message: String,
     pub resolved: bool,
@@ -18,4 +19,16 @@ impl Display for Todo {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{}", self.message)
     }
+}
+
+#[cfg(test)]
+pub mod mocks {
+    use super::Todo;
+
+    factori::factori!(Todo, {
+        default {
+            message = "foo".to_string(),
+            resolved = false
+        }
+    });
 }
