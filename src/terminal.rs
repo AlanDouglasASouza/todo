@@ -215,35 +215,3 @@ impl TerminalError {
         }
     }
 }
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn user_message_in_new_todo_is_correct() {
-        let mut mock = MockUserInterface::new();
-        mock.expect_input().return_once(|| Ok("My first todo".to_string()));
-
-        let ask_todo = mock.ask_for_new_todo().await.unwrap();
-        assert_eq!(ask_todo.message, "My first todo".to_string());
-        assert!(!ask_todo.resolved);
-    }
-
-    #[tokio::test]
-    async fn parse_user_options_devolved_u32() {
-        let mut mock = MockUserInterface::new();
-        mock.expect_input().return_once(|| Ok("32".to_string()));
-
-        let user_number = mock.parse_user_option().await.unwrap();
-        assert_eq!(user_number, 32);
-    }
-
-    #[tokio::test]
-    async fn test_todo_found_in_todos() {
-        let mock = MockUserInterface::new();
-        let todo = mock.or_not_found(Some(Todo::new("Todo OK".to_string()))).unwrap();
-        assert_eq!(todo, Todo::new("Todo OK".to_string()));
-    }
-
-} */

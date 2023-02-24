@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-#[derive(Clone /* , Debug, PartialEq */)]
+#[derive(Clone)]
 pub struct Todo {
     pub message: String,
     pub resolved: bool,
