@@ -1,2 +1,4 @@
-1-false-Amor
-2-true-Escola
+2-false-Alooo
+3-false-Amor e Odio
+4-false-Policia
+5-false-Ladrão

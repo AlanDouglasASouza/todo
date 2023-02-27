@@ -19,6 +19,7 @@ impl Terminal {
     }
 }
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait::async_trait]
 pub trait UserInterface {
     async fn get_user_command(&mut self) -> Result<UserCommand, TerminalError>;
@@ -35,7 +36,7 @@ pub trait UserInterface {
     async fn parse_user_option(&mut self) -> Result<u32, TerminalError>;
     async fn input(&mut self) -> Result<String, TerminalError>;
     async fn write_styled(&mut self, message: &str, style: Style) -> Result<(), TerminalError>;
-    fn or_not_found<'a>(&self, maybe_todo: Option<&'a Todo>) -> Result<&'a Todo, TerminalError>;
+    fn or_not_found(&self, maybe_todo: Option<Todo>) -> Result<Todo, TerminalError>;
     async fn get_key_todo_resolve(&mut self) -> Result<(), TerminalError>;
 }
 
@@ -110,7 +111,7 @@ impl UserInterface for Terminal {
         };
 
         self.output
-            .write(&todo_msg.as_bytes())
+            .write(todo_msg.as_bytes())
             .await
             .map_err(TerminalError::StdoutErr)?;
         Ok(())
@@ -173,16 +174,16 @@ impl UserInterface for Terminal {
     async fn write_styled(&mut self, message: &str, style: Style) -> Result<(), TerminalError> {
         let msg_styled = style.apply_to(message);
         self.output
-            .write(&msg_styled.to_string().as_bytes())
+            .write(msg_styled.to_string().as_bytes())
             .await
             .map_err(TerminalError::StdoutErr)?;
         Ok(())
     }
 
-    fn or_not_found<'a>(&self, maybe_todo: Option<&'a Todo>) -> Result<&'a Todo, TerminalError> {
-        maybe_todo.ok_or(TerminalError::NotFound(
-            "❗ O valor consultado não existe ❗".to_string(),
-        ))
+    fn or_not_found(&self, maybe_todo: Option<Todo>) -> Result<Todo, TerminalError> {
+        maybe_todo.ok_or_else(|| {
+            TerminalError::NotFound("❗ O valor consultado não existe ❗".to_string())
+        })
     }
 
     async fn get_key_todo_resolve(&mut self) -> Result<(), TerminalError> {
@@ -196,6 +197,7 @@ impl UserInterface for Terminal {
     }
 }
 
+#[derive(Debug)]
 pub enum TerminalError {
     StdoutErr(Error),
     StdinErr(Error),
@@ -208,8 +210,8 @@ impl TerminalError {
         match self {
             Self::StdoutErr(err) => format!("Houve um erro ao tentar exibir mensagem {}", err),
             Self::StdinErr(err) => format!("Houve um erro na entrada de dados {}", err),
-            Self::ParseErr(_err) => format!("O valor inserido precisa ser um número"),
-            Self::NotFound(err) => format!("{err}"),
+            Self::ParseErr(_err) => "O valor inserido precisa ser um número".to_string(),
+            Self::NotFound(err) => err,
         }
     }
 }
